@@ -5,5 +5,7 @@ python-dotenv==1.1.0
 yt-dlp>=2025.1.1
 faster-whisper==1.1.0
 ctranslate2==4.5.0
+# faster-whisper 1.1.0 dung av.open(..., metadata_errors=...) khong tuong thich av>=13
+av==12.3.0
 # DA BO: torch, transformers, vieneu[cuda], NLLB, sentencepiece,
 # edge-tts, deep-translator, pydub — tat ca deu phuc vu dich / long tieng.

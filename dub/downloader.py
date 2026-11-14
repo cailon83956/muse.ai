@@ -2,10 +2,18 @@
 YouTube cong khai: khong can cookie. Facebook rieng tu: can cookies/cookies.txt.
 403 thuong do yt-dlp cu hoac YouTube chan client mac dinh -> update + player_client=android.
 """
+import os
 import subprocess
+import sys
 from pathlib import Path
 
 from .config import SETTINGS
+
+# yt-dlp cai trong cung venv voi python dang chay; khi chay qua systemd
+# ExecStart=.venv/bin/python, PATH co the khong chua .venv/bin -> resolve tuong doi.
+_YTDLP = os.path.join(os.path.dirname(sys.executable), "yt-dlp")
+if not os.path.exists(_YTDLP):
+    _YTDLP = "yt-dlp"
 
 MAX_1080 = "bv*[height<=1080]+ba/b[height<=1080]/b"
 
@@ -14,7 +22,7 @@ def download(url: str, out_dir: Path) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     tpl = str(out_dir / "%(id)s.%(ext)s")
     cmd = [
-        "yt-dlp", "--no-playlist", "--merge-output-format", "mp4",
+        _YTDLP, "--no-playlist", "--merge-output-format", "mp4",
         "-f", MAX_1080, "-o", tpl,
         # Giam 403 tren YouTube: dung android client thay vi web client mac dinh
         "--extractor-args", "youtube:player_client=android",
