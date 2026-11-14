@@ -36,6 +36,17 @@ auto-dub-bot/
   data/jobs/<job-id>/    # video, srt theo job
 ```
 
+## Upload cookie khi bi chan 403
+
+Khi `/sub` bao loi 403 / "Sign in to confirm" / video rieng tu khong tai duoc:
+
+1. Dang nhap YouTube/Facebook tren Chrome, cai extension **"Get cookies.txt LOCALLY"**, Export ra `cookies.txt`.
+2. Tren Discord go `/cookies` + dinh kem file `cookies.txt` (lenh rieng tu, chi minh thay).
+3. Bot bao so cookie con han + domain (youtube.com / facebook.com) la xong, `/sub` lai link do.
+4. Kiem tra bang `/cookies-status`, xoa bang `/cookies-clear` khi khong can.
+
+Cookie luu o `cookies/cookies.txt` tren VPS, chmod 0600, khong commit len git, khong bao gio hien gia tri ra chat. Het han hoac doi mat khau thi xuat lai file moi.
+
 ## Cai dat (VPS Linux, T4)
 
 ```bash
