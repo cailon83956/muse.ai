@@ -1,0 +1,21 @@
+# Cai torch truoc, rieng 1 lenh (cu128 cho T4 / CUDA 12.8):
+# pip install torch==2.8.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu128
+torch==2.8.0
+torchaudio==2.8.0
+transformers==4.57.6
+
+discord.py==2.5.2
+python-dotenv==1.1.0
+yt-dlp>=2025.1.1
+faster-whisper==1.1.0
+ctranslate2==4.5.0
+# VieNeu-TTS v3 Turbo (SDK `vieneu`, GPU bat PyTorch, CPU dung ONNX)
+vieneu==3.7.1
+soundfile==0.13.1
+# TTS tieng Anh (cloud, khong ton VRAM)
+edge-tts==7.2.1
+# Dich EN->VI (Google, khong key). Video dai / can offline: thay bang NLLB local.
+deep-translator==1.11.4
+# Audio + SRT
+pydub==0.25.1
+# Fallback TTS tieng Viet nhe (ONNX, chi cai khi can): korvatts==0.1.0
