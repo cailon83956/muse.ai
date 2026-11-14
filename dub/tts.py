@@ -17,15 +17,18 @@ def synth_segments(segments: list[Segment], out_dir: Path) -> list[Path]:
     tts = Vieneu(precision="float16")
     try:
         texts = [s.text for s in segments]
+        kwargs = {"batch_size": 8}
+        if getattr(SETTINGS, "vieneu_voice", ""):
+            kwargs["voice"] = SETTINGS.vieneu_voice
         # infer_batch tra ve list wav (numpy / path tuy ban) — chuan hoa ve file
-        results = tts.infer_batch(texts, batch_size=8)
+        results = tts.infer_batch(texts, **kwargs)
         paths: list[Path] = []
         for i, r in enumerate(results):
             p = out_dir / f"seg_{i:04d}.wav"
             if isinstance(r, (str, Path)) and Path(r).exists():
                 Path(r).rename(p)
             else:
-                # numpy array 24kHz: ghi wav bang stdlib (khong them soundfile)
+                # numpy array 48kHz: ghi wav bang stdlib (khong them soundfile)
                 import numpy as np
                 import wave
                 arr = np.asarray(r)
@@ -34,7 +37,7 @@ def synth_segments(segments: list[Segment], out_dir: Path) -> list[Path]:
                 with wave.open(str(p), "wb") as w:
                     w.setnchannels(1)
                     w.setsampwidth(2)
-                    w.setframerate(24000)
+                    w.setframerate(48000)
                     w.writeframes(arr.tobytes())
             paths.append(p)
         return paths

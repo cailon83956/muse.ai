@@ -16,5 +16,5 @@ transformers
 sentencepiece
 sacremoses
 demucs
-"vieneu[cuda]==3.7.1"
+vieneu[cuda]==3.7.1
 numpy

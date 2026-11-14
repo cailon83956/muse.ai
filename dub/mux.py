@@ -73,6 +73,7 @@ def mux_video(video: Path, audio_wav: Path, out_mp4: Path) -> Path:
 def build_dubbed_audio(vi_segments: list[Segment], tts_wavs: list[Path],
                        total_s: float, work_dir: Path,
                        music_wav: Path | None) -> Path:
+    work_dir.mkdir(parents=True, exist_ok=True)
     fitted: list[tuple[float, Path]] = []
     for i, (s, wav) in enumerate(zip(vi_segments, tts_wavs)):
         target = max(0.3, s.end - s.start)
