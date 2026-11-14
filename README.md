@@ -1,9 +1,13 @@
 # Dub Bot — Discord, long tieng + phu de (T4 GPU)
 
 Bot Discord:
-- `/sub <url>` — xuat phu de rieng biet: `orig.srt` (goc) + `vi.srt` (tieng Viet)
-- `/dub <url>` — long tieng sang tieng Viet: `dubbed.mp4` + `orig.srt` + `vi.srt`
-- `/separate <url>` — Demucs tach am thanh goc: `vocals.mp3` (giong) + `music.mp3` (nhac nen)
+- `/sub <url|file>` — xuat phu de rieng biet: `orig.srt` (goc) + `vi.srt` (tieng Viet)
+- `/dub <url|file>` — long tieng sang tieng Viet: `dubbed.mp4` + `orig.srt` + `vi.srt`
+- `/separate <url|file>` — Demucs tach am thanh goc: `vocals.mp3` (giong) + `music.mp3` (nhac nen)
+
+Moi lenh nhan **url hoac file upload truc tiep** (tham so `file`): co url thi tai
+ve, co file thi dung luon file do, bo qua yt-dlp. Chi can 1 trong 2, co ca 2 thi
+uu tien file. File chap nhan: mp4/mkv/mov/webm/mp3/wav/m4a/ogg/flac, toi da 500MB.
 - `/cookies` — upload `cookies.txt` khi bi chan 403 / video rieng tu
 
 ## Pipeline

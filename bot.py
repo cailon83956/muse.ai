@@ -22,6 +22,17 @@ bot = discord.Client(intents=intents)
 tree = app_commands.CommandTree(bot)
 
 MAX_DISCORD_BYTES = 25 * 1024 * 1024  # gioi han file dinh kem Discord (khong Nitro)
+MAX_UPLOAD_BYTES = 500 * 1024 * 1024  # file upload toi da 500MB (gioi han Nitro)
+ALLOWED_EXTS = {".mp4", ".mkv", ".mov", ".webm", ".mp3", ".wav", ".m4a", ".ogg", ".flac"}
+
+
+def _upload_error(file: discord.Attachment) -> str | None:
+    ext = "." + file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    if ext not in ALLOWED_EXTS:
+        return f"❌ File `{file.filename}` khong ho tro — chi nhan: {', '.join(sorted(ALLOWED_EXTS))}."
+    if file.size > MAX_UPLOAD_BYTES:
+        return f"❌ File qua lon ({file.size // 1048576}MB > 500MB)."
+    return None
 
 
 async def _wait_with_progress(itx: discord.Interaction, job: Job):
@@ -60,29 +71,53 @@ async def _wait_with_progress(itx: discord.Interaction, job: Job):
         await itx.followup.send(files=files)
 
 
-async def _enqueue(itx: discord.Interaction, mode: str, url: str, lang: str = "en"):
+async def _enqueue(itx: discord.Interaction, mode: str, url: str | None = None,
+                 file: discord.Attachment | None = None, lang: str = "en"):
     await itx.response.defer(thinking=True)
-    job = Job(url=url, src_lang=lang, mode=mode)
+    if file is None and not url:
+        await itx.followup.send("❌ Dien `url` hoac dinh kem `file` video/audio — phai co 1 trong 2.")
+        return
+    job = Job(url=url or "", src_lang=lang, mode=mode)
+    if file is not None:
+        # Uu tien file upload: tai file ve truoc roi moi enqueue
+        err = _upload_error(file)
+        if err:
+            await itx.followup.send(err)
+            return
+        d = SETTINGS.jobs_dir / job.id
+        d.mkdir(parents=True, exist_ok=True)
+        ext = "." + file.filename.rsplit(".", 1)[-1].lower()
+        job.video = d / f"upload{ext}"
+        job.video.write_bytes(await file.read())
+        job.uploaded = True
     await worker.q.put(job)
     await _wait_with_progress(itx, job)
 
 
 @tree.command(name="sub", description="Xuat phu de: orig.srt goc + vi.srt tieng Viet rieng")
-@app_commands.describe(url="Link YouTube / Facebook", lang="Ngon ngu noi trong video: en hoac vi")
-async def sub(itx: discord.Interaction, url: str, lang: str = "en"):
-    await _enqueue(itx, "sub", url, lang)
+@app_commands.describe(url="Link YouTube / Facebook (hoac de trong neu upload file)",
+                       file="Upload truc tiep file video/audio thay cho url",
+                       lang="Ngon ngu noi trong video: en hoac vi")
+async def sub(itx: discord.Interaction, url: str | None = None,
+              file: discord.Attachment | None = None, lang: str = "en"):
+    await _enqueue(itx, "sub", url, file, lang)
 
 
 @tree.command(name="dub", description="Long tieng sang tieng Viet: dubbed.mp4 + orig.srt + vi.srt")
-@app_commands.describe(url="Link YouTube / Facebook", lang="Ngon ngu goc trong video: en hoac vi")
-async def dub(itx: discord.Interaction, url: str, lang: str = "en"):
-    await _enqueue(itx, "dub", url, lang)
+@app_commands.describe(url="Link YouTube / Facebook (hoac de trong neu upload file)",
+                       file="Upload truc tiep file video/audio thay cho url",
+                       lang="Ngon ngu goc trong video: en hoac vi")
+async def dub(itx: discord.Interaction, url: str | None = None,
+              file: discord.Attachment | None = None, lang: str = "en"):
+    await _enqueue(itx, "dub", url, file, lang)
 
 
 @tree.command(name="separate", description="Demucs: tach giong (vocals.mp3) va nhac nen (music.mp3) tu video")
-@app_commands.describe(url="Link YouTube / Facebook")
-async def separate(itx: discord.Interaction, url: str):
-    await _enqueue(itx, "separate", url, "en")
+@app_commands.describe(url="Link YouTube / Facebook (hoac de trong neu upload file)",
+                       file="Upload truc tiep file video/audio thay cho url")
+async def separate(itx: discord.Interaction, url: str | None = None,
+                   file: discord.Attachment | None = None):
+    await _enqueue(itx, "separate", url, file, "en")
 
 
 @tree.command(name="cookies", description="Upload file cookies.txt de tai video bi chan 403 / video rieng tu")

@@ -40,6 +40,7 @@ class Job:
     progress: str = ""
     pct: int = 0
     video: Path | None = None
+    uploaded: bool = False  # True = video da upload qua Discord, bo qua yt-dlp
     srt: Path | None = None       # orig.srt
     vi_srt: Path | None = None    # vi.srt (da dich, hoac = orig neu nguon VI)
     dubbed: Path | None = None    # dubbed.mp4
@@ -105,8 +106,12 @@ async def run_job(job: Job) -> Job:
     d.mkdir(parents=True, exist_ok=True)
     try:
         await asyncio.to_thread(require_gpu)
-        job.set_stage("downloading")
-        job.video = await asyncio.to_thread(download, job.url, d)
+        if job.uploaded and job.video and job.video.exists():
+            # File upload qua Discord: bo qua yt-dlp, di thang vao Demucs/ASR
+            job.status, job.progress, job.pct = "separating", "📁 Da nhan file upload, bo qua tai video.", 15
+        else:
+            job.set_stage("downloading")
+            job.video = await asyncio.to_thread(download, job.url, d)
 
         if job.mode == "separate":
             full = await asyncio.to_thread(_extract_full_audio, job.video, d / "audio_full.wav")
