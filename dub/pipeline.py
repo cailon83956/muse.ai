@@ -15,7 +15,7 @@ from pathlib import Path
 from . import align, asr, demucs, mux, translate, tts
 from .config import SETTINGS, require_gpu
 from .downloader import download, extract_audio
-from .srt import Segment, write_srt
+from .srt import Segment, read_srt, write_srt
 
 # (stage, pct) — bot dung pct de ve thanh tien trinh
 STAGES = {
@@ -41,6 +41,8 @@ class Job:
     pct: int = 0
     video: Path | None = None
     uploaded: bool = False  # True = video da upload qua Discord, bo qua yt-dlp
+    subs_file: Path | None = None  # file .srt da dich do user upload (chi /dub)
+    demucs_enabled: bool = True  # False = tat Demucs, dung audio goc luon
     srt: Path | None = None       # orig.srt
     vi_srt: Path | None = None    # vi.srt (da dich, hoac = orig neu nguon VI)
     dubbed: Path | None = None    # dubbed.mp4
@@ -70,14 +72,17 @@ def _extract_full_audio(video: Path, out_wav: Path) -> Path:
 
 
 def _asr_with_demucs(job: Job, d: Path) -> tuple[list[Segment], Path | None, Path | None]:
-    """Tai audio -> Demucs -> ASR tren vocals. Tra (segments, vocals_wav, music_wav)."""
-    job.set_stage("separating")
+    """Tai audio -> Demucs (neu bat) -> ASR tren vocals. Tra (segments, vocals_wav, music_wav)."""
     full = _extract_full_audio(job.video, d / "audio_full.wav")
     vocals_wav, music_wav = None, None
-    try:
-        vocals_wav, music_wav = demucs.separate(full, d / "demucs")
-    except Exception as e:
-        job.warning += f"Demucs that bai, dung audio goc: {str(e)[:200]}. "
+    if job.demucs_enabled:
+        job.set_stage("separating")
+        try:
+            vocals_wav, music_wav = demucs.separate(full, d / "demucs")
+        except Exception as e:
+            job.warning += f"Demucs that bai, dung audio goc: {str(e)[:200]}. "
+    else:
+        job.warning += "Demucs tat theo yeu cau, dung audio goc. "
     src_wav = vocals_wav if vocals_wav else full
     job.set_stage("asr")
     wav16 = extract_audio(src_wav, d / "audio16k.wav")
@@ -122,9 +127,28 @@ async def run_job(job: Job) -> Job:
             job.set_stage("done")
             return job
 
-        segs, _vocals, music_wav = await asyncio.to_thread(_asr_with_demucs, job, d)
-        vi_segs, vi_path = await asyncio.to_thread(_translate_if_en, job, segs, d)
-        job.srt, job.vi_srt = d / "orig.srt", vi_path
+        if job.mode == "dub" and job.subs_file and job.subs_file.exists():
+            # /dub voi file phu de da dich: bo qua ASR + dich, dung thang
+            # moc + loi trong file user dua. Chi can Demucs lay nhac nen (neu bat).
+            job.status, job.progress, job.pct = "translating", "📄 Dung file phu de da dich, bo qua ASR/dich.", 60
+            vi_segs = read_srt(str(job.subs_file))
+            if not vi_segs:
+                raise RuntimeError("File phu de da dich rong hoac sai dinh dang SRT.")
+            job.vi_srt = d / "vi.srt"
+            job.vi_srt.write_text(job.subs_file.read_text(encoding="utf-8"), encoding="utf-8")
+            job.srt = None  # khong co ASR nen khong co orig.srt
+            music_wav = None
+            if job.demucs_enabled:
+                full = await asyncio.to_thread(_extract_full_audio, job.video, d / "audio_full.wav")
+                job.set_stage("separating")
+                try:
+                    _voc, music_wav = await asyncio.to_thread(demucs.separate, full, d / "demucs")
+                except Exception as e:
+                    job.warning += f"Demucs that bai, long tieng khong co nhac nen: {str(e)[:200]}. "
+        else:
+            segs, _vocals, music_wav = await asyncio.to_thread(_asr_with_demucs, job, d)
+            vi_segs, vi_path = await asyncio.to_thread(_translate_if_en, job, segs, d)
+            job.srt, job.vi_srt = d / "orig.srt", vi_path
 
         if job.mode == "sub":
             job.set_stage("done")

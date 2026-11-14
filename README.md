@@ -1,8 +1,10 @@
 # Dub Bot — Discord, long tieng + phu de (T4 GPU)
 
 Bot Discord:
-- `/sub <url|file>` — xuat phu de rieng biet: `orig.srt` (goc) + `vi.srt` (tieng Viet)
-- `/dub <url|file>` — long tieng sang tieng Viet: `dubbed.mp4` + `orig.srt` + `vi.srt`
+- `/sub <url|file> [demucs=true/false]` — xuat phu de rieng biet: `orig.srt` (goc) + `vi.srt` (tieng Viet)
+- `/dub <url|file> [subs=file .srt da dich] [demucs=true/false]` — long tieng sang tieng Viet: `dubbed.mp4` + `orig.srt` + `vi.srt`
+  - Co `subs`: bot doc thang file phu de da dich cua may (moc + loi trong file), **bo qua ASR + dich** — chi chay TTS + ghep. Khong co `subs` thi tu ASR + dich nhu binh thuong. Luc nay khong co `orig.srt` (vi khong ASR).
+  - `demucs=false`: tat Demucs, dung audio goc luon (nhanh hon, nhe VRAM hon, nhung ASR kem hon tren video nhieu nhac / long tieng khong co nhac nen rieng).
 - `/separate <url|file>` — Demucs tach am thanh goc: `vocals.mp3` (giong) + `music.mp3` (nhac nen)
 
 Moi lenh nhan **url hoac file upload truc tiep** (tham so `file`): co url thi tai

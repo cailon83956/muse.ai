@@ -1,6 +1,6 @@
 """Bot Discord long tieng + phu de.
-  /sub <url>       -> orig.srt (goc) + vi.srt (tieng Viet rieng)
-  /dub <url>       -> dubbed.mp4 + orig.srt + vi.srt
+  /sub <url|file>  -> orig.srt (goc) + vi.srt (tieng Viet rieng)
+  /dub <url|file> [subs=.srt da dich] [demucs=true/false] -> dubbed.mp4 + orig.srt + vi.srt
   /separate <url>  -> vocals.mp3 (giong) + music.mp3 (nhac nen, Demucs)
   /cookies ...     -> upload cookies.txt khi bi chan 403
 Tien trinh: embed co thanh ██████░░░░ 62% + ten buoc, edit lien tuc.
@@ -72,24 +72,35 @@ async def _wait_with_progress(itx: discord.Interaction, job: Job):
 
 
 async def _enqueue(itx: discord.Interaction, mode: str, url: str | None = None,
-                 file: discord.Attachment | None = None, lang: str = "en"):
+                 file: discord.Attachment | None = None, lang: str = "en",
+                 subs: discord.Attachment | None = None, demucs: bool = True):
     await itx.response.defer(thinking=True)
     if file is None and not url:
         await itx.followup.send("❌ Dien `url` hoac dinh kem `file` video/audio — phai co 1 trong 2.")
         return
-    job = Job(url=url or "", src_lang=lang, mode=mode)
+    job = Job(url=url or "", src_lang=lang, mode=mode, demucs_enabled=demucs)
+    d = SETTINGS.jobs_dir / job.id
+    d.mkdir(parents=True, exist_ok=True)
     if file is not None:
         # Uu tien file upload: tai file ve truoc roi moi enqueue
         err = _upload_error(file)
         if err:
             await itx.followup.send(err)
             return
-        d = SETTINGS.jobs_dir / job.id
-        d.mkdir(parents=True, exist_ok=True)
         ext = "." + file.filename.rsplit(".", 1)[-1].lower()
         job.video = d / f"upload{ext}"
         job.video.write_bytes(await file.read())
         job.uploaded = True
+    if subs is not None:
+        # File phu de da dich (.srt): chi /dub dung, bo qua ASR + dich
+        if not subs.filename.lower().endswith(".srt"):
+            await itx.followup.send("❌ File phu de phai la `.srt`.")
+            return
+        if subs.size > 5 * 1024 * 1024:
+            await itx.followup.send("❌ File phu de qua lon (>5MB).")
+            return
+        job.subs_file = d / "provided_vi.srt"
+        job.subs_file.write_bytes(await subs.read())
     await worker.q.put(job)
     await _wait_with_progress(itx, job)
 
@@ -97,19 +108,24 @@ async def _enqueue(itx: discord.Interaction, mode: str, url: str | None = None,
 @tree.command(name="sub", description="Xuat phu de: orig.srt goc + vi.srt tieng Viet rieng")
 @app_commands.describe(url="Link YouTube / Facebook (hoac de trong neu upload file)",
                        file="Upload truc tiep file video/audio thay cho url",
-                       lang="Ngon ngu noi trong video: en hoac vi")
+                       lang="Ngon ngu noi trong video: en hoac vi",
+                       demucs="Bat/tat Demucs tach giong truoc khi ASR (mac dinh: bat)")
 async def sub(itx: discord.Interaction, url: str | None = None,
-              file: discord.Attachment | None = None, lang: str = "en"):
-    await _enqueue(itx, "sub", url, file, lang)
+              file: discord.Attachment | None = None, lang: str = "en",
+              demucs: bool = True):
+    await _enqueue(itx, "sub", url, file, lang, demucs=demucs)
 
 
 @tree.command(name="dub", description="Long tieng sang tieng Viet: dubbed.mp4 + orig.srt + vi.srt")
 @app_commands.describe(url="Link YouTube / Facebook (hoac de trong neu upload file)",
                        file="Upload truc tiep file video/audio thay cho url",
-                       lang="Ngon ngu goc trong video: en hoac vi")
+                       lang="Ngon ngu goc trong video: en hoac vi",
+                       subs="File .srt da dich san — co thi bo qua ASR/dich, doc thang file nay",
+                       demucs="Bat/tat Demucs tach nhac nen (mac dinh: bat)")
 async def dub(itx: discord.Interaction, url: str | None = None,
-              file: discord.Attachment | None = None, lang: str = "en"):
-    await _enqueue(itx, "dub", url, file, lang)
+              file: discord.Attachment | None = None, lang: str = "en",
+              subs: discord.Attachment | None = None, demucs: bool = True):
+    await _enqueue(itx, "dub", url, file, lang, subs=subs, demucs=demucs)
 
 
 @tree.command(name="separate", description="Demucs: tach giong (vocals.mp3) va nhac nen (music.mp3) tu video")
