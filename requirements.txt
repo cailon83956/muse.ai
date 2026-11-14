@@ -1,5 +1,7 @@
-# Bot chi xuat .srt — khong dich, khong TTS, khong ghep video.
-# Chi can faster-whisper (CTranslate2, GPU) + yt-dlp + discord.py.
+# Bot long tieng + phu de Discord, chay tren Tesla T4 (CUDA).
+# Cai dat: python 3.12 venv, pip install -r requirements.txt
+# Luu y: torch/demucs/transformers/vieneu nang (~vài GB, cai lau lan dau),
+# nhung chi can cai 1 lan tren VPS. faster-whisper giu av==12.3.0 (fix cua opencode).
 discord.py==2.5.2
 python-dotenv==1.1.0
 yt-dlp>=2025.1.1
@@ -7,5 +9,12 @@ faster-whisper==1.1.0
 ctranslate2==4.5.0
 # faster-whisper 1.1.0 dung av.open(..., metadata_errors=...) khong tuong thich av>=13
 av==12.3.0
-# DA BO: torch, transformers, vieneu[cuda], NLLB, sentencepiece,
-# edge-tts, deep-translator, pydub — tat ca deu phuc vu dich / long tieng.
+# Dich EN->VI (NLLB) + tach Demucs + TTS VieNeu — tat ca GPU
+torch
+torchaudio
+transformers
+sentencepiece
+sacremoses
+demucs
+"vieneu[cuda]==3.7.1"
+numpy

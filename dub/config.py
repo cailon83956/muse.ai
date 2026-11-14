@@ -19,6 +19,10 @@ class Settings:
     # ASR tren GPU (faster-whisper / CTranslate2)
     whisper_en: str = os.getenv("WHISPER_EN", "large-v3")
     phowhisper_ct2_dir: str = os.getenv("PHOWHISPER_CT2_DIR", "")  # vd: models/phowhisper-large-ct2
+    # Long tieng (GPU): dich NLLB, TTS VieNeu, tach Demucs
+    nllb_model: str = os.getenv("NLLB_MODEL", "facebook/nllb-200-distilled-600M")
+    demucs_model: str = os.getenv("DEMUCS_MODEL", "htdemucs")
+    vieneu_voice: str = os.getenv("VIENEU_VOICE", "")  # de trong = giong mac dinh
 
 
 SETTINGS = Settings()

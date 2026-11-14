@@ -1,4 +1,9 @@
-"""Bot Discord chi lam phu de: /sub <url> -> file .srt (khong dich, khong long tieng).
+"""Bot Discord long tieng + phu de.
+  /sub <url>       -> orig.srt (goc) + vi.srt (tieng Viet rieng)
+  /dub <url>       -> dubbed.mp4 + orig.srt + vi.srt
+  /separate <url>  -> vocals.mp3 (giong) + music.mp3 (nhac nen, Demucs)
+  /cookies ...     -> upload cookies.txt khi bi chan 403
+Tien trinh: embed co thanh ██████░░░░ 62% + ten buoc, edit lien tuc.
 Chay: python bot.py  (token trong .env, khong hardcode)
 """
 import asyncio
@@ -9,31 +14,75 @@ from discord import app_commands
 from dub import cookies as cookie_store
 from dub.config import SETTINGS
 from dub.pipeline import Job, Worker
+from dub.progress import bar, embed_for
 
 worker = Worker()
 intents = discord.Intents.default()
 bot = discord.Client(intents=intents)
 tree = app_commands.CommandTree(bot)
 
+MAX_DISCORD_BYTES = 25 * 1024 * 1024  # gioi han file dinh kem Discord (khong Nitro)
 
-async def _wait_and_reply(itx: discord.Interaction, job: Job):
+
+async def _wait_with_progress(itx: discord.Interaction, job: Job):
+    """Gui embed tien trinh roi edit moi 4s cho toi khi xong / loi."""
+    msg = await itx.followup.send(embed=embed_for(job.id, "⏳ Dang cho trong hang doi...", 0, job.mode))
+    last_pct = -1
     while job.status not in ("done", "failed"):
-        await asyncio.sleep(5)
+        await asyncio.sleep(4)
+        if job.pct != last_pct:
+            last_pct = job.pct
+            try:
+                await msg.edit(embed=embed_for(job.id, job.progress, job.pct, job.mode))
+            except discord.HTTPException:
+                pass
     if job.status == "failed":
-        await itx.followup.send(f"❌ Job `{job.id}` loi: {job.error[:1500]}")
+        await msg.edit(embed=discord.Embed(
+            title=f"❌ Job `{job.id}` loi", description=job.error[:1500], color=0xED4245))
         return
-    files = [discord.File(job.srt)] if job.srt and job.srt.exists() else []
-    await itx.followup.send(f"✅ Xong `{job.id}` - {job.progress}", files=files)
+    files, notes = [], []
+    for path, label in [(job.dubbed, "dubbed.mp4"), (job.srt, "orig.srt"),
+                        (job.vi_srt, "vi.srt"), (job.vocals, "vocals.mp3"),
+                        (job.music, "music.mp3")]:
+        if path and path.exists():
+            if path.stat().st_size > MAX_DISCORD_BYTES:
+                notes.append(f"⚠️ `{label}` qua 25MB ({path.stat().st_size // 1048576}MB), Discord khong gui duoc — file nam o `data/jobs/{job.id}/` tren VPS.")
+            else:
+                files.append(discord.File(path))
+    done = discord.Embed(
+        title=f"✅ Xong `{job.id}`",
+        description=f"`{bar(100)}`\n{job.progress}" + (f"\n⚠️ {job.warning}" if job.warning else ""),
+        color=0x57F287)
+    if notes:
+        done.add_field(name="Luu y", value="\n".join(notes), inline=False)
+    await msg.edit(embed=done)
+    if files:
+        await itx.followup.send(files=files)
 
 
-@tree.command(name="sub", description="Xuat file phu de .srt goc tu video YouTube/Facebook")
+async def _enqueue(itx: discord.Interaction, mode: str, url: str, lang: str = "en"):
+    await itx.response.defer(thinking=True)
+    job = Job(url=url, src_lang=lang, mode=mode)
+    await worker.q.put(job)
+    await _wait_with_progress(itx, job)
+
+
+@tree.command(name="sub", description="Xuat phu de: orig.srt goc + vi.srt tieng Viet rieng")
 @app_commands.describe(url="Link YouTube / Facebook", lang="Ngon ngu noi trong video: en hoac vi")
 async def sub(itx: discord.Interaction, url: str, lang: str = "en"):
-    await itx.response.defer(thinking=True)
-    job = Job(url=url, src_lang=lang)
-    await worker.q.put(job)
-    await itx.followup.send(f"📝 Da nhan job `{job.id}` - dang cho (vi tri {worker.q.qsize()}).")
-    await _wait_and_reply(itx, job)
+    await _enqueue(itx, "sub", url, lang)
+
+
+@tree.command(name="dub", description="Long tieng sang tieng Viet: dubbed.mp4 + orig.srt + vi.srt")
+@app_commands.describe(url="Link YouTube / Facebook", lang="Ngon ngu goc trong video: en hoac vi")
+async def dub(itx: discord.Interaction, url: str, lang: str = "en"):
+    await _enqueue(itx, "dub", url, lang)
+
+
+@tree.command(name="separate", description="Demucs: tach giong (vocals.mp3) va nhac nen (music.mp3) tu video")
+@app_commands.describe(url="Link YouTube / Facebook")
+async def separate(itx: discord.Interaction, url: str):
+    await _enqueue(itx, "separate", url, "en")
 
 
 @tree.command(name="cookies", description="Upload file cookies.txt de tai video bi chan 403 / video rieng tu")
@@ -88,7 +137,7 @@ async def cookies_clear(itx: discord.Interaction):
 
 @tree.command(name="queue", description="Xem hang doi")
 async def queue(itx: discord.Interaction):
-    cur = f"{worker.current.id} ({worker.current.status})" if worker.current else "khong co"
+    cur = f"{worker.current.id} ({worker.current.status} {worker.current.pct}%)" if worker.current else "khong co"
     await itx.response.send_message(f"Dang chay: {cur}\nCho: {worker.q.qsize()} job")
 
 
@@ -99,7 +148,7 @@ async def on_ready():
         await tree.sync(guild=discord.Object(id=SETTINGS.guild_id))
     else:
         await tree.sync()  # global sync cham ~1h lan dau
-    print(f"Bot san sang: {bot.user} - /sub /cookies /cookies-status /cookies-clear /queue")
+    print(f"Bot san sang: {bot.user} - /sub /dub /separate /cookies /queue")
 
 
 if __name__ == "__main__":
