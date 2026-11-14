@@ -1,4 +1,4 @@
-"""ASR tuan tu, unload sau moi job de tra VRAM cho TTS.
+"""ASR tren GPU, chi de xuat .srt.
 - EN: faster-whisper large-v3, fp16 (CT2).
 - VI: PhoWhisper-large (vinai) DA CONVERT sang CTranslate2, xem scripts/convert_phowhisper_ct2.sh.
   PhoWhisper goc la checkpoint PyTorch, faster-whisper KHONG load truc tiep duoc.
@@ -6,7 +6,6 @@
 """
 import gc
 
-import torch
 from faster_whisper import WhisperModel
 
 from .config import SETTINGS
@@ -29,6 +28,5 @@ def transcribe(wav_path: str, lang: str, srt_path: str) -> list[Segment]:
         out = [Segment(s.start, s.end, s.text) for s in segments if s.text.strip()]
     finally:
         del model
-        gc.collect()
-        torch.cuda.empty_cache()
+        gc.collect()  # CTranslate2 giai phong VRAM khi del model, khong can torch
     return out if write_srt(out, srt_path) else out
