@@ -24,7 +24,12 @@ def download(url: str, out_dir: Path) -> Path:
         cmd[1:1] = ["--cookies", str(SETTINGS.cookies_file)]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
     if r.returncode != 0:
-        raise RuntimeError(f"yt-dlp loi ({r.returncode}): {(r.stderr or r.stdout)[-2000:]}")
+        err = (r.stderr or r.stdout)[-2000:]
+        hint = ""
+        if ("403" in err or "Forbidden" in err or "Sign in to confirm" in err
+                or "login" in err.lower()) and not SETTINGS.cookies_file.exists():
+            hint = " — Bi chan / can dang nhap: upload cookies.txt bang lenh /cookies tren Discord roi /sub lai."
+        raise RuntimeError(f"yt-dlp loi ({r.returncode}): {err}{hint}")
     # --print after_move in ra duong dan file cuoi cung
     path = Path(r.stdout.strip().splitlines()[-1])
     if not path.exists():
