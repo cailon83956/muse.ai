@@ -19,10 +19,11 @@ ctranslate2==4.5.0
 # tren Windows: cai torch cu128 truoc (xem 2 dong dau file) roi moi cai vieneu.
 vieneu[cuda]==3.7.1
 soundfile==0.13.1
-# TTS tieng Anh (cloud, khong ton VRAM)
-edge-tts==7.2.1
-# Dich EN->VI (Google, khong key). Video dai / can offline: thay bang NLLB local.
-deep-translator==1.11.4
-# Audio + SRT
+# Dich EN<->VI: NLLB-200-distilled-600M tren GPU (transformers, da co o tren)
+# Can sentencepiece cho tokenizer NLLB
+sentencepiece>=0.2.0
+sacremoses>=0.1.1
+# Audio + SRT (pydub/ffmpeg la xu ly audio thuan CPU, nhe, khong co ban GPU)
 pydub==0.25.1
-# Fallback TTS tieng Viet nhe (ONNX, chi cai khi can): korvatts==0.1.0
+# DA BO: edge-tts (cloud), deep-translator (cloud Google), korvatts (ONNX/CPU)
+# — tat ca cac model AI gio deu chay tren GPU: ASR + NLLB + VieNeu.
