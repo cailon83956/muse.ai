@@ -88,6 +88,8 @@ git clone <repo> auto-dub-bot && cd auto-dub-bot
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install torch==2.8.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu128
 pip install -r requirements.txt
+# requirements.txt da dung vieneu[cuda]==3.7.1 (khong phai vieneu thuong,
+# ban thuong chi chay CPU/ONNX). Extra "gpu" khong ton tai tren PyPI.
 cp .env.example .env   # dien DISCORD_TOKEN
 
 # 3. PhoWhisper tieng Viet (1 lan, neu can)
