@@ -1,0 +1,6 @@
+.env
+cookies/cookies.txt
+data/
+__pycache__/
+*.pyc
+models/
