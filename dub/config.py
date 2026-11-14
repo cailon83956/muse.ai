@@ -23,6 +23,8 @@ class Settings:
     nllb_model: str = os.getenv("NLLB_MODEL", "facebook/nllb-200-distilled-600M")
     demucs_model: str = os.getenv("DEMUCS_MODEL", "htdemucs")
     vieneu_voice: str = os.getenv("VIENEU_VOICE", "")  # de trong = giong mac dinh
+    # URL goc cua file server (vd: http://34.142.155.8:8000). De trong = dung gofile.io.
+    file_base_url: str = os.getenv("FILE_BASE_URL", "").rstrip("/")
 
 
 SETTINGS = Settings()

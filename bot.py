@@ -106,11 +106,15 @@ async def _wait_with_progress(itx: discord.Interaction, job: Job):
                         (job.music, "music.mp3")]:
         if path and path.exists():
             if path.stat().st_size > MAX_DISCORD_BYTES:
-                link = await asyncio.to_thread(_gofile_upload, path)
-                if link:
-                    notes.append(f"📦 `{label}` ({path.stat().st_size // 1048576}MB) > 25MB — da upload len gofile: {link}")
+                if SETTINGS.file_base_url:
+                    link = f"{SETTINGS.file_base_url}/{job.id}/{path.name}"
+                    notes.append(f"📦 `{label}` ({path.stat().st_size // 1048576}MB) > 25MB — tai ve: {link}")
                 else:
-                    notes.append(f"⚠️ `{label}` qua 25MB ({path.stat().st_size // 1048576}MB), Discord khong gui duoc — file nam o `data/jobs/{job.id}/` tren VPS.")
+                    link = await asyncio.to_thread(_gofile_upload, path)
+                    if link:
+                        notes.append(f"📦 `{label}` ({path.stat().st_size // 1048576}MB) > 25MB — da upload len gofile: {link}")
+                    else:
+                        notes.append(f"⚠️ `{label}` qua 25MB ({path.stat().st_size // 1048576}MB), Discord khong gui duoc — file nam o `data/jobs/{job.id}/` tren VPS.")
             else:
                 files.append(discord.File(path))
     done = discord.Embed(
