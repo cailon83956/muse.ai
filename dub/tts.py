@@ -1,6 +1,8 @@
 """TTS.
-- VI: VieNeu-TTS v3 Turbo, package `vieneu`, API that: Vieneu(precision='fp16'),
-  .infer(text, voice=...) / .infer_batch(texts, voice=..., batch_size=8).
+- VI: VieNeu-TTS v3 Turbo, package `vieneu[cuda]==3.7.1` (khong phai `vieneu`
+  thuong — ban thuong la torch-free, chi chay ONNX/CPU).
+  API: Vieneu(precision='fp16'), .infer(text, voice=...) /
+  .infer_batch(texts, voice=..., batch_size=8).
   Tren CUDA no tu bat PyTorch + batching; tren CPU tu chuyen ONNX.
   Khong co tham so max_streams=8 trong SDK nay - dung infer_batch(batch_size=8).
   License CC BY-NC 4.0 (ban 0.3B) - kiem tra lai truoc khi dung thuong mai.
