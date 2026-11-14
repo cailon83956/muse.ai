@@ -29,13 +29,13 @@ bot.py (discord.py, defer, followup) --enqueue--> asyncio.Queue (Worker: 1 job)
       +-- /sub: DUNG O DAY, tra .srt
       |
       v
-[4] translate.py : EN->VI tung segment (deep-translator/Google, khong key)
-      |  src==tgt thi bo qua. Video dai: doi sang NLLB local.
+[4] translate.py : NLLB-200-distilled-600M, CUDA fp16, batch 8
+      |  src==tgt thi bo qua. Khong dung Google/deep-translator nua.
       v
  dub.srt (giu nguyen moc thoi gian)
       v
-[5] tts.py : VI: VieNeu v3 Turbo infer_batch(batch_size=8, fp16)
-      |       EN: edge-tts (cloud, 0 VRAM)
+[5] tts.py : VieNeu v3 Turbo infer_batch(batch_size=8, fp16) — CA VI + EN
+      |  (VieNeu song ngu EN-VI, khong dung edge-tts cloud nua)
       |  unload TTS sau xong
       v
 [6] mux.py : fit_to_slot() -- toc do TTS kep 0.85-1.15x, thieu thi dem silence,
@@ -47,7 +47,14 @@ bot.py (discord.py, defer, followup) --enqueue--> asyncio.Queue (Worker: 1 job)
 bot.py: <=25MB gui file truc tiep, >25MB bao duong dan VPS + up host ngoai
 ```
 
-VRAM T4: Whisper large-v3 fp16 ~6GB, VieNeu ~2-3GB. Chạy tuần tự + unload sau mỗi bước nên đỉnh ~6-8GB, không giữ 2 model cùng lúc. Đừng chạy 2 job song song.
+TAT CA MODEL AI DEU CHAY TREN GPU (khong fallback CPU/cloud):
+| Buoc | Model | GPU |
+|---|---|---|
+| ASR | faster-whisper large-v3 / PhoWhisper-CT2 | CUDA fp16, ~6GB |
+| Dich | NLLB-200-distilled-600M | CUDA fp16, ~1.2GB |
+| TTS vi+en | VieNeu v3 Turbo `vieneu[cuda]` | CUDA fp16, ~2-3GB |
+Chay tuan tu + unload sau moi buoc nen dinh ~6-8GB, khong giu 2 model cung luc. Bot fail nhanh neu khong co CUDA (`require_gpu()` o pipeline).
+Ngoai le duy nhat khong phai AI: yt-dlp tai video + ffmpeg/pydub cat/ghep audio — viec nhe, khong co ban GPU, giu nguyen CPU.
 
 Đính chính nhỏ: T4 thật là 16GB VRAM, không phải 12GB. Thiết kế theo ngân sách 12GB nên vẫn an toàn trên T4.
 
@@ -64,7 +71,7 @@ auto-dub-bot/
     asr.py               # faster-whisper / PhoWhisper-CT2
     srt.py               # Segment, doc/ghi SRT
     translate.py         # EN->VI theo segment
-    tts.py               # VieNeu (vi) / edge-tts (en) / Korva fallback
+    tts.py               # VieNeu GPU (ca vi + en)
     mux.py               # fit_to_slot + ffmpeg ghep
     pipeline.py          # Job + Worker tuan tu
   scripts/
@@ -128,6 +135,5 @@ File `systemd/dub-bot.service` đã viết sẵn, sửa `User=` và `WorkingDire
 
 - Dịch mặc định EN→VI; video tiếng Việt thì `/dub <url> src:vi tgt:vi` (không dịch, chỉ lồng lại).
 - VieNeu SDK hiện tại không có tham số `max_streams=8` — dùng `infer_batch(batch_size=8)`.
-- KorvaTTS chỉ là fallback ONNX/CPU, không phải TTS chính trên GPU.
-- `deep-translator` dùng Google không key — có thể bị rate-limit với video dài, lúc đó đổi NLLB local.
-- Chưa test trên T4 thật (máy này không có GPU) — cần chạy thử `/sub` video ngắn trước rồi mới `/dub`.
+- Tat ca model AI tren GPU, khong fallback CPU/cloud: dich NLLB GPU, TTS VieNeu GPU (ca en), ASR Whisper GPU. Da bo edge-tts, deep-translator, KorvaTTS.
+- Chưa test trên T4 thật (máy này không có GPU) — cần chạy thử `/sub` video ngắn trước rồi mới `/dub`. Rieng NLLB cung chua test that: can chay thu dich 1-2 cau truoc khi dich video dai.
