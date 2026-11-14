@@ -3,15 +3,14 @@ Thu tu: download -> audio 16k -> ASR -> (dich neu can) -> TTS -> fit SRT -> mux.
 Model duoc load/unload trong tung buoc, khong giu 2 model cung luc.
 """
 import asyncio
-import shutil
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import asr, mux, tts
-from .config import SETTINGS
+from .config import SETTINGS, require_gpu
 from .downloader import download, extract_audio
-from .srt import Segment, read_srt, write_srt
+from .srt import Segment, write_srt
 from .translate import translate_segments
 
 
@@ -34,6 +33,7 @@ async def run_job(job: Job) -> Job:
     d = SETTINGS.jobs_dir / job.id
     d.mkdir(parents=True, exist_ok=True)
     try:
+        await asyncio.to_thread(require_gpu)  # fail nhanh neu mat GPU
         job.status, job.progress = "downloading", "Dang tai video..."
         job.video = await asyncio.to_thread(download, job.url, d)
         job.status, job.progress = "asr", "Dang nhan dang giong noi..."
