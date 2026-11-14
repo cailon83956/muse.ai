@@ -6,9 +6,10 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import asr
+from . import align, asr
 from .config import SETTINGS, require_gpu
 from .downloader import download, extract_audio
+from .srt import write_srt
 
 
 @dataclass
@@ -32,9 +33,12 @@ async def run_job(job: Job) -> Job:
         job.video = await asyncio.to_thread(download, job.url, d)
         job.status, job.progress = "asr", "Dang nhan dang giong noi..."
         wav = await asyncio.to_thread(extract_audio, job.video, d / "audio16k.wav")
-        segs = await asyncio.to_thread(asr.transcribe, str(wav), job.src_lang, str(d / "orig.srt"))
+        segs = await asyncio.to_thread(asr.transcribe, str(wav), job.src_lang)
         if not segs:
             raise RuntimeError("ASR tra ve 0 segment - video khong co loi noi?")
+        job.status, job.progress = "aligning", "Dang can moc phu de khop mieng..."
+        segs = await asyncio.to_thread(align.align_segments, segs, str(wav))
+        write_srt(segs, str(d / "orig.srt"))
         job.srt = d / "orig.srt"
         job.status, job.progress = "done", f"Xong: {len(segs)} cau"
         return job
