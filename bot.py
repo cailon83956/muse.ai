@@ -196,9 +196,12 @@ async def queue(itx: discord.Interaction):
 async def on_ready():
     asyncio.create_task(worker.start())
     if SETTINGS.guild_id:
-        await tree.sync(guild=discord.Object(id=SETTINGS.guild_id))
+        tree.copy_global_to(guild=discord.Object(id=SETTINGS.guild_id))
+        synced = await tree.sync(guild=discord.Object(id=SETTINGS.guild_id))
+        print(f"Guild sync: {len(synced)} commands -> {[c.name for c in synced]}")
     else:
-        await tree.sync()  # global sync cham ~1h lan dau
+        synced = await tree.sync()
+        print(f"Global sync: {len(synced)} commands")
     print(f"Bot san sang: {bot.user} - /sub /dub /separate /cookies /queue")
 
 
