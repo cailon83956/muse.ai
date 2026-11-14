@@ -36,6 +36,16 @@ auto-dub-bot/
   data/jobs/<job-id>/    # video, srt theo job
 ```
 
+## Fix lech mieng (timing phu de khop mieng)
+
+Khong them thu vien nao, khong Demucs / WhisperX / Wav2Lip (nang):
+
+1. **Word timestamps** — faster-whisper `word_timestamps=True`, moc lay tu tu dau/cuoi thay vi ca segment (segment Whisper hay dem them khoang im).
+2. **Snap bang nang luong that** — `dub/align.py`, chi dung stdlib (`wave` + `math`): doc wav 16kHz, RMS moi 10ms, nguong = 25% RMS dinh cua chinh doan do, tim khung noi dau/cuoi trong cua so ±0.3s quanh moc Whisper. Cua so khong lan sang cau ke ben.
+3. **Lead/tail** — tru 80ms dau (phu de hien truoc mieng mo 1 chut), cong 50ms cuoi, kep khong chong cau sau.
+
+Test tong hop (im 1s + tone 1s + im 0.5s + tone 1s): segment thua im 0.3s dau/cuoi duoc can ve dung 0.92→2.05 va 2.42→3.55; doan im hoan toan thi giu nguyen moc cu. Chua test tren video that / T4.
+
 ## Upload cookie khi bi chan 403
 
 Khi `/sub` bao loi 403 / "Sign in to confirm" / video rieng tu khong tai duoc:
