@@ -10,7 +10,7 @@ from .config import SETTINGS
 from .srt import Segment
 
 
-def synth_segments(segments: list[Segment], out_dir: Path) -> list[Path]:
+def synth_segments(segments: list[Segment], out_dir: Path, voice: str = "") -> list[Path]:
     from vieneu import Vieneu
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -18,8 +18,9 @@ def synth_segments(segments: list[Segment], out_dir: Path) -> list[Path]:
     try:
         texts = [s.text for s in segments]
         kwargs = {"batch_size": 8}
-        if getattr(SETTINGS, "vieneu_voice", ""):
-            kwargs["voice"] = SETTINGS.vieneu_voice
+        chosen = voice.strip() if voice else (getattr(SETTINGS, "vieneu_voice", "") or "")
+        if chosen:
+            kwargs["voice"] = chosen
         # infer_batch tra ve list wav (numpy / path tuy ban) — chuan hoa ve file
         results = tts.infer_batch(texts, **kwargs)
         paths: list[Path] = []

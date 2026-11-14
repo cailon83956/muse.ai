@@ -30,6 +30,26 @@ MAX_UPLOAD_BYTES = 500 * 1024 * 1024  # file upload toi da 500MB (gioi han Nitro
 ALLOWED_EXTS = {".mp4", ".mkv", ".mov", ".webm", ".mp3", ".wav", ".m4a", ".ogg", ".flac"}
 
 
+def _voice_choices():
+    try:
+        import json, os
+        import vieneu
+        base = os.path.dirname(vieneu.__file__)
+        for fn in ("assets/voices_v3_turbo.json",):
+            p = os.path.join(base, fn)
+            if os.path.exists(p):
+                with open(p, encoding="utf-8") as f:
+                    data = json.load(f)
+                presets = data.get("presets", {})
+                return [app_commands.Choice(name=n, value=n) for n in presets.keys()]
+    except Exception:
+        pass
+    return [app_commands.Choice(name="Minh Quân", value="Minh Quân")]
+
+
+VOICE_CHOICES = _voice_choices()
+
+
 def _upload_error(file: discord.Attachment) -> str | None:
     ext = "." + file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
     if ext not in ALLOWED_EXTS:
@@ -77,12 +97,14 @@ async def _wait_with_progress(itx: discord.Interaction, job: Job):
 
 async def _enqueue(itx: discord.Interaction, mode: str, url: str | None = None,
                  file: discord.Attachment | None = None, lang: str = "en",
-                 subs: discord.Attachment | None = None, demucs: bool = True):
+                 subs: discord.Attachment | None = None, demucs: bool = True,
+                 voice: str | None = None):
     await itx.response.defer(thinking=True)
     if file is None and not url:
         await itx.followup.send("❌ Dien `url` hoac dinh kem `file` video/audio — phai co 1 trong 2.")
         return
-    job = Job(url=url or "", src_lang=lang, mode=mode, demucs_enabled=demucs)
+    job = Job(url=url or "", src_lang=lang, mode=mode, demucs_enabled=demucs,
+              voice=voice or "")
     d = SETTINGS.jobs_dir / job.id
     d.mkdir(parents=True, exist_ok=True)
     if file is not None:
@@ -125,11 +147,15 @@ async def sub(itx: discord.Interaction, url: str | None = None,
                        file="Upload truc tiep file video/audio thay cho url",
                        lang="Ngon ngu goc trong video: en hoac vi",
                        subs="File .srt da dich san — co thi bo qua ASR/dich, doc thang file nay",
-                       demucs="Bat/tat Demucs tach nhac nen (mac dinh: bat)")
+                       demucs="Bat/tat Demucs tach nhac nen (mac dinh: bat)",
+                       voice="Giong VieNeu doc tieng Viet (mac dinh: Minh Quan)")
+@app_commands.choices(voice=VOICE_CHOICES)
 async def dub(itx: discord.Interaction, url: str | None = None,
               file: discord.Attachment | None = None, lang: str = "en",
-              subs: discord.Attachment | None = None, demucs: bool = True):
-    await _enqueue(itx, "dub", url, file, lang, subs=subs, demucs=demucs)
+              subs: discord.Attachment | None = None, demucs: bool = True,
+              voice: app_commands.Choice[str] | None = None):
+    await _enqueue(itx, "dub", url, file, lang, subs=subs, demucs=demucs,
+                   voice=voice.value if voice else None)
 
 
 @tree.command(name="separate", description="Demucs: tach giong (vocals.mp3) va nhac nen (music.mp3) tu video")

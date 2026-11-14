@@ -36,6 +36,7 @@ class Job:
     url: str = ""
     src_lang: str = "en"
     mode: str = "sub"  # sub | dub | separate
+    voice: str = ""  # VieNeu voice (de trong = mac dinh)
     status: str = "queued"
     progress: str = ""
     pct: int = 0
@@ -156,7 +157,7 @@ async def run_job(job: Job) -> Job:
 
         # /dub: TTS tieng Viet -> fit slot -> tron nhac -> mux
         job.set_stage("tts")
-        tts_wavs = await asyncio.to_thread(tts.synth_segments, vi_segs, d / "tts")
+        tts_wavs = await asyncio.to_thread(tts.synth_segments, vi_segs, d / "tts", job.voice)
         job.set_stage("muxing")
         total_s = max(s.end for s in vi_segs)
         dub_audio = await asyncio.to_thread(
