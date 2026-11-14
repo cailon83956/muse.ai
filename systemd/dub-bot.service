@@ -1,0 +1,18 @@
+[Unit]
+Description=Auto-Dub Discord Bot (T4)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# SUA 2 dong nay theo VPS cua may:
+User=ubuntu
+WorkingDirectory=/home/ubuntu/auto-dub-bot
+ExecStart=/home/ubuntu/auto-dub-bot/.venv/bin/python bot.py
+Restart=on-failure
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+# Token nam trong .env, khong ghi vao day
+
+[Install]
+WantedBy=multi-user.target
