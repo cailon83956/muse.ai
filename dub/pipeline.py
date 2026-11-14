@@ -159,9 +159,15 @@ async def run_job(job: Job) -> Job:
         job.set_stage("tts")
         tts_wavs = await asyncio.to_thread(tts.synth_segments, vi_segs, d / "tts", job.voice)
         job.set_stage("muxing")
-        total_s = max(s.end for s in vi_segs)
+        # Timeline = do dai VIDEO (khong phai moc cuoi cua phu de) — neu khong
+        # `-shortest` o mux se cat mat doan video sau cau cuoi.
+        video_s = await asyncio.to_thread(mux.media_duration, job.video)
+        total_s = max(video_s, max(s.end for s in vi_segs))
+        # Phu de tu ASR da tru lead-in (align.LEAD_S); giong phai vao dung luc mieng mo.
+        # File subs do nguoi dung dua thi giu nguyen moc cua ho.
+        shift = 0.0 if job.subs_file and job.subs_file.exists() else align.LEAD_S
         dub_audio = await asyncio.to_thread(
-            mux.build_dubbed_audio, vi_segs, tts_wavs, total_s, d / "mux", music_wav)
+            mux.build_dubbed_audio, vi_segs, tts_wavs, total_s, d / "mux", music_wav, shift)
         job.dubbed = await asyncio.to_thread(
             mux.mux_video, job.video, dub_audio, d / "dubbed.mp4")
         job.set_stage("done")

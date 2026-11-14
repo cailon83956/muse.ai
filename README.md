@@ -68,6 +68,9 @@ auto-dub-bot/
 2. **Snap bang nang luong that** — `dub/align.py`, chi dung stdlib (`wave` + `math`): RMS moi 10ms, nguong = 25% RMS dinh cua chinh doan do, tim khung noi dau/cuoi trong cua so ±0.3s quanh moc Whisper. Cua so khong lan sang cau ke ben.
 3. **Lead/tail** — tru 80ms dau, cong 50ms cuoi, kep khong chong cau sau.
 
+4. **Fit giong long tieng vao slot (`dub/mux.py`)** — truoc day `atempo` bi tinh nguoc (target/dur thay vi dur/target) nen cau TTS dai hon slot bi *lam cham* roi cat cut, cau ngan bi tang toc. Gio: cat im dau/cuoi cau TTS (`silenceremove`), tempo = dur/slot (cham toi 0.85x, tang toi 1.25x), con dai thi muon toi da 0.4s khoang lang truoc cau ke, het cho moi tang toc them (tran 2.0x). Giong vao `start + LEAD_S` (am thanh som hon hinh >45ms la thay lech); file `subs` cua user thi giu nguyen moc.
+5. **Timeline = do dai video** — truoc day `total_s = max(s.end)` + `-shortest` cat mat doan video sau cau cuoi.
+
 Test tong hop (im 1s + tone 1s + im 0.5s + tone 1s): segment thua im 0.3s dau/cuoi duoc can ve dung 0.92→2.05 va 2.42→3.55; doan im hoan toan thi giu nguyen moc cu. Chua test tren video that / T4.
 
 ## Upload cookie khi bi chan 403
