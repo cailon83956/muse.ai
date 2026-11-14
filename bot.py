@@ -8,6 +8,10 @@ Chay: python bot.py  (token trong .env, khong hardcode)
 """
 import asyncio
 import faulthandler, signal
+import json
+import subprocess
+import urllib.request
+from pathlib import Path
 
 import discord
 from discord import app_commands
@@ -59,6 +63,27 @@ def _upload_error(file: discord.Attachment) -> str | None:
     return None
 
 
+def _gofile_upload(path: Path) -> str | None:
+    """Upload file lon len gofile.io, tra ve link download page hoac None."""
+    try:
+        with urllib.request.urlopen("https://api.gofile.io/servers", timeout=15) as r:
+            data = json.loads(r.read())
+        servers = data.get("data", {}).get("servers", [])
+        if not servers:
+            return None
+        server = servers[0]["name"]
+        r = subprocess.run(
+            ["curl", "-s", "-X", "POST", "-F", f"file=@{path}",
+             f"https://{server}.gofile.io/uploadFile"],
+            capture_output=True, text=True, timeout=600)
+        j = json.loads(r.stdout)
+        if j.get("status") == "ok":
+            return j["data"].get("downloadPage")
+    except Exception as e:
+        print(f"[gofile] upload failed: {e}", flush=True)
+    return None
+
+
 async def _wait_with_progress(itx: discord.Interaction, job: Job):
     """Gui embed tien trinh roi edit moi 4s cho toi khi xong / loi."""
     msg = await itx.followup.send(embed=embed_for(job.id, "⏳ Dang cho trong hang doi...", 0, job.mode))
@@ -81,7 +106,11 @@ async def _wait_with_progress(itx: discord.Interaction, job: Job):
                         (job.music, "music.mp3")]:
         if path and path.exists():
             if path.stat().st_size > MAX_DISCORD_BYTES:
-                notes.append(f"⚠️ `{label}` qua 25MB ({path.stat().st_size // 1048576}MB), Discord khong gui duoc — file nam o `data/jobs/{job.id}/` tren VPS.")
+                link = await asyncio.to_thread(_gofile_upload, path)
+                if link:
+                    notes.append(f"📦 `{label}` ({path.stat().st_size // 1048576}MB) > 25MB — da upload len gofile: {link}")
+                else:
+                    notes.append(f"⚠️ `{label}` qua 25MB ({path.stat().st_size // 1048576}MB), Discord khong gui duoc — file nam o `data/jobs/{job.id}/` tren VPS.")
             else:
                 files.append(discord.File(path))
     done = discord.Embed(
