@@ -18,31 +18,59 @@ if not os.path.exists(_YTDLP):
 MAX_1080 = "bv*[height<=1080]+ba/b[height<=1080]/b"
 
 
+def _run_ytdlp(cmd: list[str]) -> subprocess.CompletedProcess:
+    print(f"[downloader] running: {' '.join(cmd[:8])} ...", flush=True)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
+    print(f"[downloader] finished rc={r.returncode}", flush=True)
+    return r
+
+
 def download(url: str, out_dir: Path) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     tpl = str(out_dir / "%(id)s.%(ext)s")
-    cmd = [
-        _YTDLP, "--no-playlist", "--merge-output-format", "mp4",
+    base = [
+        "--no-playlist", "--merge-output-format", "mp4",
         "-f", MAX_1080, "-o", tpl,
-        # Giam 403 tren YouTube: dung android client thay vi web client mac dinh
-        "--extractor-args", "youtube:player_client=android",
+        "--remote-components", "ejs:github",
         "--print", "after_move:filepath", url,
     ]
+
+    # Thu tu thu:
+    # 1) Neu co cookies: thu voi cookies (client mac dinh, ho tro cookies) —
+    #    phuc vu video rieng tu / gioi han tuoi.
+    # 2) Neu that bai hoac khong co cookies: thu android client KHONG cookies —
+    #    android bo qua chan bot theo IP (nhung khong ho tro cookies).
+    attempts: list[list[str]] = []
     if SETTINGS.cookies_file.exists():
-        cmd[1:1] = ["--cookies", str(SETTINGS.cookies_file)]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
-    if r.returncode != 0:
-        err = (r.stderr or r.stdout)[-2000:]
-        hint = ""
-        if ("403" in err or "Forbidden" in err or "Sign in to confirm" in err
-                or "login" in err.lower()) and not SETTINGS.cookies_file.exists():
-            hint = " — Bi chan / can dang nhap: upload cookies.txt bang lenh /cookies tren Discord roi /sub lai."
-        raise RuntimeError(f"yt-dlp loi ({r.returncode}): {err}{hint}")
-    # --print after_move in ra duong dan file cuoi cung
-    path = Path(r.stdout.strip().splitlines()[-1])
-    if not path.exists():
-        raise RuntimeError(f"yt-dlp xong nhung khong thay file: {r.stdout[-500:]}")
-    return path
+        attempts.append([_YTDLP, "--cookies", str(SETTINGS.cookies_file)] + base)
+    attempts.append([_YTDLP, "--extractor-args", "youtube:player_client=android"] + base)
+
+    last_err = ""
+    for cmd in attempts:
+        r = _run_ytdlp(cmd)
+        if r.returncode == 0:
+            lines = [ln for ln in r.stdout.strip().splitlines() if ln.strip()]
+            if lines:
+                path = Path(lines[-1])
+                if path.exists():
+                    return path
+            last_err = f"yt-dlp xong nhung khong thay file: {r.stdout[-500:]}"
+            continue
+        last_err = (r.stderr or r.stdout)[-2000:]
+        # Neu loi format/khong ho tro cookies, thu attempt tiep theo
+        if ("Requested format is not available" in last_err
+                or "Skipping client" in last_err
+                or "Sign in to confirm" in last_err
+                or "403" in last_err or "Forbidden" in last_err):
+            continue
+        # Loi khac (vd: URL sai) -> dung luon
+        break
+
+    hint = ""
+    if ("403" in last_err or "Forbidden" in last_err or "Sign in to confirm" in last_err
+            or "login" in last_err.lower()) and not SETTINGS.cookies_file.exists():
+        hint = " — Bi chan / can dang nhap: upload cookies.txt bang lenh /cookies tren Discord roi /sub lai."
+    raise RuntimeError(f"yt-dlp loi: {last_err}{hint}")
 
 
 def extract_audio(video: Path, out_wav: Path) -> Path:

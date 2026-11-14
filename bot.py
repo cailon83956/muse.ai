@@ -7,6 +7,7 @@ Tien trinh: embed co thanh ██████░░░░ 62% + ten buoc, edit l
 Chay: python bot.py  (token trong .env, khong hardcode)
 """
 import asyncio
+import faulthandler, signal
 
 import discord
 from discord import app_commands
@@ -15,6 +16,9 @@ from dub import cookies as cookie_store
 from dub.config import SETTINGS
 from dub.pipeline import Job, Worker
 from dub.progress import bar, embed_for
+
+faulthandler.enable()
+faulthandler.register(signal.SIGUSR1, chain=False)
 
 worker = Worker()
 intents = discord.Intents.default()

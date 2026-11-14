@@ -167,6 +167,7 @@ async def run_job(job: Job) -> Job:
         return job
     except Exception as e:
         job.status, job.error = "failed", str(e)[:1000]
+        print(f"[job {job.id}] FAILED at {job.status}: {job.error}", flush=True)
         return job
 
 
