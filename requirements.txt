@@ -10,7 +10,14 @@ yt-dlp>=2025.1.1
 faster-whisper==1.1.0
 ctranslate2==4.5.0
 # VieNeu-TTS v3 Turbo (SDK `vieneu`, GPU bat PyTorch, CPU dung ONNX)
-vieneu==3.7.1
+# QUAN TRONG: phai la vieneu[cuda], KHONG phai vieneu thuong.
+# vieneu thuong la ban torch-free, chi chay ONNX/CPU, khong dung GPU.
+# Da check truc tiep PyPI JSON 3.7.1 / 3.8.3 / 3.8.4: extras chi co
+# legacy, pdf, watermark, cuda, finetune — KHONG co extra "gpu".
+# README cu ghi vieneu[gpu] la cho v1/v2, pip se khong cai duoc gi them.
+# Tren Linux: pip install "vieneu[cuda]==3.7.1" (PyPI torch da co CUDA),
+# tren Windows: cai torch cu128 truoc (xem 2 dong dau file) roi moi cai vieneu.
+vieneu[cuda]==3.7.1
 soundfile==0.13.1
 # TTS tieng Anh (cloud, khong ton VRAM)
 edge-tts==7.2.1
