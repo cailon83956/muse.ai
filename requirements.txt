@@ -1,6 +1,6 @@
 # Bot long tieng + phu de Discord, chay tren Tesla T4 (CUDA).
 # Cai dat: python 3.12 venv, pip install -r requirements.txt
-# Luu y: torch/demucs/transformers/vieneu nang (~vai GB, cai lau lan dau),
+# Luu y: torch/demucs/transformers/vieneu nang (~vài GB, cai lau lan dau),
 # nhung chi can cai 1 lan tren VPS. faster-whisper giu av==12.3.0 (fix cua opencode).
 discord.py==2.5.2
 python-dotenv==1.1.0
